@@ -6,6 +6,7 @@ import { AppCategory, AIApp } from './types';
 import { Header } from './components/Header';
 import { Concierge } from './components/Concierge';
 import { NewsSection } from './components/NewsSection';
+import { VisitorCounter } from './components/VisitorCounter';
 
 const App: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<AppCategory>(AppCategory.ALL);
@@ -154,26 +155,36 @@ const App: React.FC = () => {
       </button>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-6 border-t border-gray-800 mt-8">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-4">
-                <h2 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
-                  AI-Bank
-                </h2>
-                <p className="text-gray-500 text-xs hidden md:block">
-                  未来のテクノロジーを、すべての人の手に。
-                </p>
+      <footer className="bg-gray-900 text-white py-8 border-t border-gray-800 mt-8">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            
+            {/* Left Side: Branding & Counter */}
+            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6">
+              <div className="flex items-center gap-4">
+                  <h2 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
+                    AI-Bank
+                  </h2>
+                  <p className="text-gray-500 text-xs hidden md:block border-l border-gray-700 pl-4">
+                    未来のテクノロジーを、すべての人の手に。
+                  </p>
+              </div>
+              <VisitorCounter />
             </div>
             
-            <div className="flex gap-6 text-xs text-gray-400">
-              <a href="#" className="hover:text-white transition-colors">利用規約</a>
-              <a href="#" className="hover:text-white transition-colors">プライバシーポリシー</a>
-              <a href="#" className="hover:text-white transition-colors">お問い合わせ</a>
-            </div>
+            {/* Right Side: Links & Copyright */}
+            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 w-full md:w-auto justify-end">
+              <div className="flex gap-6 text-xs text-gray-400">
+                <a href="#" className="hover:text-white transition-colors">利用規約</a>
+                <a href="#" className="hover:text-white transition-colors">プライバシーポリシー</a>
+                <a href="#" className="hover:text-white transition-colors">お問い合わせ</a>
+              </div>
 
-            <div className="text-xs text-gray-600 md:ml-auto md:order-last">
-              &copy; {new Date().getFullYear()} AI-Bank
+              <div className="text-xs text-gray-600 whitespace-nowrap">
+                &copy; {new Date().getFullYear()} AI-Bank
+              </div>
             </div>
+          </div>
         </div>
       </footer>
 

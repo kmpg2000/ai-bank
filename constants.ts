@@ -1,7 +1,7 @@
 
 import { AIApp, AppCategory } from './types';
 
-export const HERO_TAGLINE = "無料のAI アプリで生活をもっと豊かに。";
+export const HERO_TAGLINE = "無料のAI アプリで生活を豊かにしませんか。";
 
 export const MOCK_APPS: AIApp[] = [
   {

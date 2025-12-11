@@ -49,3 +49,17 @@ export interface NewsData {
   sources: NewsSource[];
   timestamp: Date;
 }
+
+export interface WisdomData {
+  japanese: string;
+  romaji: string;
+  english: string;
+  theme: string;
+}
+
+export enum LoadingState {
+  IDLE = 'IDLE',
+  LOADING = 'LOADING',
+  SUCCESS = 'SUCCESS',
+  ERROR = 'ERROR',
+}
