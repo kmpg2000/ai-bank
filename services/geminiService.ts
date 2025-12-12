@@ -75,9 +75,17 @@ const CATEGORY_MAP: Record<NewsCategory, { key: string; label: string }> = {
   [NewsCategory.SCIENCE]: { key: 'science', label: 'science (科学)' },
 };
 
-export const getLatestNews = async (targetCategories: NewsCategory[] = Object.values(NewsCategory)): Promise<NewsData> => {
+interface GetNewsOptions {
+  fastMode?: boolean;
+}
+
+export const getLatestNews = async (
+  targetCategories: NewsCategory[] = Object.values(NewsCategory),
+  options?: GetNewsOptions
+): Promise<NewsData> => {
   try {
     const ai = getClient();
+    const { fastMode = false } = options || {};
     
     // Build the dynamic part of the prompt based on requested categories
     const categoriesPrompt = targetCategories.map((cat, index) => `${index + 1}. ${CATEGORY_MAP[cat].label}`).join('\n');
@@ -89,27 +97,37 @@ export const getLatestNews = async (targetCategories: NewsCategory[] = Object.va
 
     const jsonExampleString = JSON.stringify(jsonExample, null, 2);
 
+    // Dynamic instructions based on mode
+    const itemCount = fastMode ? 3 : 5;
+    const sourceConstraint = fastMode 
+      ? "検索先は大手ニュースサイト（日経新聞、Yahoo!ニュース等）1〜2つのみに限定し、速度を最優先してください。" 
+      : "日本国内の最新ニュースをGoogle検索してください。";
+
+    const prompt = `
+      ${sourceConstraint}
+      以下のカテゴリに分類してください。
+
+      【重要：除外ルール】
+      中国に関連するニュースは検索結果および選定リストから完全に除外してください。
+
+      対象カテゴリ:
+      ${categoriesPrompt}
+
+      各カテゴリについて、重要度が高いニュースを${itemCount}件ずつ選定してください。
+      ${fastMode ? "※概要は非常に短く、1文でまとめてください。" : ""}
+      
+      【出力形式の絶対ルール】
+      検索結果をまとめた後、**最終的な出力は以下のJSON形式のみ**にしてください。
+      Markdownのコードブロック(\`\`\`json)や、挨拶文、説明文は一切含めないでください。
+      
+      期待するJSON構造:
+      ${jsonExampleString}
+    `;
+
     // Prompt carefully constructed to force JSON output after using the search tool.
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: `
-        日本国内の最新ニュースをGoogle検索し、以下のカテゴリに分類してください。
-
-        【重要：除外ルール】
-        中国に関連するニュースは検索結果および選定リストから完全に除外してください。
-
-        対象カテゴリ:
-        ${categoriesPrompt}
-
-        各カテゴリについて、重要度が高いニュースを5件ずつ選定してください。
-        
-        【出力形式の絶対ルール】
-        検索結果をまとめた後、**最終的な出力は以下のJSON形式のみ**にしてください。
-        Markdownのコードブロック(\`\`\`json)や、挨拶文、説明文は一切含めないでください。
-        
-        期待するJSON構造:
-        ${jsonExampleString}
-      `,
+      contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
       },

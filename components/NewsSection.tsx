@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { RefreshCw, Newspaper, Clock, Info, Sparkles, Loader2 } from 'lucide-react';
 import { getLatestNews } from '../services/geminiService';
 import { NewsData, NewsCategory, NewsItem } from '../types';
@@ -10,23 +10,22 @@ export const NewsSection: React.FC = () => {
   const [backgroundLoading, setBackgroundLoading] = useState(false);
   const [error, setError] = useState(false);
   const [activeCategory, setActiveCategory] = useState<NewsCategory>(NewsCategory.ECONOMY);
-  const refreshIntervalRef = useRef<number | null>(null);
 
   const fetchNews = async () => {
     setLoading(true);
     setError(false);
     
     try {
-      // 1. Priority Load: Economy only
-      // This allows the user to see content much faster (1 API call with fewer tokens)
-      const economyData = await getLatestNews([NewsCategory.ECONOMY]);
+      // 1. Priority Load: Economy only with FAST MODE
+      // This limits sources to 1-2 major sites and reduces items to 3 for ~2s response
+      const economyData = await getLatestNews([NewsCategory.ECONOMY], { fastMode: true });
       setNews(economyData);
       setLoading(false); // Unlock UI for the user immediately
 
-      // 2. Background Load: All other categories
+      // 2. Background Load: All other categories (Standard mode)
       setBackgroundLoading(true);
       const otherCategories = Object.values(NewsCategory).filter(c => c !== NewsCategory.ECONOMY);
-      const otherData = await getLatestNews(otherCategories);
+      const otherData = await getLatestNews(otherCategories); // Default fastMode is false
 
       // Merge data
       setNews(prev => {
@@ -63,13 +62,7 @@ export const NewsSection: React.FC = () => {
 
   useEffect(() => {
     fetchNews();
-    refreshIntervalRef.current = window.setInterval(fetchNews, 900000); // 15 min
-
-    return () => {
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
-      }
-    };
+    // Removed automatic interval refresh logic
   }, []);
 
   const formatDate = (date: Date) => {
@@ -144,7 +137,8 @@ export const NewsSection: React.FC = () => {
               <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
                   <span className="animate-pulse">ニュースを取得中...</span>
               </div>
-              {[...Array(5)].map((_, i) => (
+              {/* fastMode returns 3 items, so show 3 skeletons to match expectation */}
+              {[...Array(3)].map((_, i) => (
                 <div key={i} className="h-8 bg-gray-50 rounded-lg w-full animate-pulse"></div>
               ))}
             </div>

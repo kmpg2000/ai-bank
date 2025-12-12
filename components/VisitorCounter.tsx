@@ -4,41 +4,51 @@ import { Users } from 'lucide-react';
 
 export const VisitorCounter: React.FC = () => {
   const [count, setCount] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const fetchCount = async () => {
       try {
-        // Using countapi.xyz which is a free counting service.
-        // We use a specific namespace for this app.
-        // Note: Ad blockers might block this request.
-        const namespace = 'ai-bank-demo-v1';
+        setLoading(true);
+        // countapi.xyz is deprecated/down. Switched to counterapi.dev.
+        // This provides a persistent counter without authentication.
+        // We use a specific namespace for this app to ensure continuity.
+        const namespace = 'ai-bank-official-site';
         const key = 'visits';
-        const response = await fetch(`https://api.countapi.xyz/hit/${namespace}/${key}`);
+        
+        // The 'up' endpoint increments the counter and returns the new value.
+        const response = await fetch(`https://api.counterapi.dev/v1/${namespace}/${key}/up`);
         
         if (!response.ok) {
            throw new Error('Counter API Error');
         }
         
         const data = await response.json();
-        setCount(data.value);
+        setCount(data.count);
       } catch (error) {
-        console.warn('Visitor counter error (likely blocked by adblocker):', error);
-        // Fallback to a clear placeholder or simulated number if API fails
-        // so the UI doesn't look broken.
-        setCount(1024 + Math.floor(Math.random() * 100)); 
+        console.warn('Visitor counter error:', error);
+        setError(true);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchCount();
   }, []);
 
-  if (count === null) {
+  if (loading) {
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800/50 rounded-full border border-gray-700/50 animate-pulse">
         <div className="w-3 h-3 bg-gray-600 rounded-full"></div>
         <div className="w-16 h-3 bg-gray-600 rounded"></div>
       </div>
     );
+  }
+
+  // If error occurs, do not show random numbers. Hide the component to ensure accuracy.
+  if (error || count === null) {
+    return null;
   }
 
   return (
