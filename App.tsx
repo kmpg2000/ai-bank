@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Search, Sparkles, Tag, Star, ArrowRight, Grid } from 'lucide-react';
+import { Search, Sparkles, Tag, Star, ArrowRight } from 'lucide-react';
 import { MOCK_APPS } from './constants';
 import { AppCategory, AIApp } from './types';
 import { Header } from './components/Header';
@@ -44,19 +44,10 @@ const App: React.FC = () => {
         <NewsSection />
         
         {/* Apps Section Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-gray-200 pb-4">
-          <div className="flex items-center gap-2">
-            <div className="bg-indigo-600 text-white p-1.5 rounded-lg shadow-sm">
-              <Grid size={20} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 leading-tight">AI Apps Library</h2>
-              <p className="text-xs text-gray-500 mt-0.5">厳選されたAIツールコレクション</p>
-            </div>
-          </div>
+        <div className="flex flex-col md:flex-row md:items-center justify-end gap-4 mb-6 border-b border-gray-200 pb-4">
           
           {/* Category Filters */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-start md:justify-end">
             {Object.values(AppCategory).map((category) => (
               <button
                 key={category}

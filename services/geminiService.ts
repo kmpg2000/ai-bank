@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { MOCK_APPS } from "../constants";
 import { ConciergeResponse, NewsData, NewsSource, NewsCategory, NewsItem } from "../types";
@@ -83,9 +82,84 @@ export const getLatestNews = async (
   targetCategories: NewsCategory[] = Object.values(NewsCategory),
   options?: GetNewsOptions
 ): Promise<NewsData> => {
+  const { fastMode = false } = options || {};
+  const ai = getClient();
+  const timestamp = new Date();
+
+  // Initialize empty structure
+  const items: Record<NewsCategory, NewsItem[]> = Object.values(NewsCategory).reduce((acc, cat) => {
+    acc[cat] = [];
+    return acc;
+  }, {} as Record<NewsCategory, NewsItem[]>);
+
   try {
-    const ai = getClient();
-    const { fastMode = false } = options || {};
+    // ---------------------------------------------------------
+    // STRATEGY A: FAST MODE (Text Parsing)
+    // Avoids JSON generation overhead for speed.
+    // ---------------------------------------------------------
+    if (fastMode && targetCategories.length === 1) {
+      const targetCategory = targetCategories[0];
+      const categoryLabel = CATEGORY_MAP[targetCategory].label;
+      
+      const prompt = `
+        日本国内の最新の「${categoryLabel}」に関するニュースをGoogle検索し、トップニュースを5件抽出してください。
+        
+        【重要：出力形式】
+        JSONは使用しないでください。
+        各ニュースを1行ずつ、以下の形式（パイプ区切り）で出力してください。
+        
+        記事タイトル||記事の要約（30文字以内）
+        記事タイトル||記事の要約（30文字以内）
+        記事タイトル||記事の要約（30文字以内）
+        記事タイトル||記事の要約（30文字以内）
+        記事タイトル||記事の要約（30文字以内）
+
+        ※余計な挨拶やMarkdownの装飾は一切不要です。
+        ※**タイトルと要約は必ず日本語で記述してください。**
+      `;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }],
+        },
+      });
+
+      const text = response.text || "";
+      const lines = text.split('\n').filter(line => line.includes('||'));
+      
+      const parsedItems: NewsItem[] = lines.map(line => {
+        // Handle numbering (1., 1), -) and Markdown bolding
+        let cleanLine = line.replace(/^[\d\-\*\.\)]+\s*/, '').trim(); 
+        cleanLine = cleanLine.replace(/\*\*/g, ''); // Remove bold markdown
+        
+        const [title, summary] = cleanLine.split('||');
+        return {
+          title: title?.trim() || "ニュース取得エラー",
+          summary: summary?.trim() || "詳細を取得できませんでした。"
+        };
+      }).slice(0, 5);
+
+      items[targetCategory] = parsedItems;
+
+      // Extract sources
+      const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      const sources: NewsSource[] = chunks
+        .filter((c: any) => c.web?.uri && c.web?.title)
+        .map((c: any) => ({ title: c.web.title, uri: c.web.uri }));
+
+      return {
+        items,
+        sources: Array.from(new Map(sources.map(s => [s.uri, s])).values()),
+        timestamp
+      };
+    }
+
+    // ---------------------------------------------------------
+    // STRATEGY B: STANDARD MODE (JSON Parsing)
+    // Used for multiple categories or background fetch.
+    // ---------------------------------------------------------
     
     // Build the dynamic part of the prompt based on requested categories
     const categoriesPrompt = targetCategories.map((cat, index) => `${index + 1}. ${CATEGORY_MAP[cat].label}`).join('\n');
@@ -97,34 +171,19 @@ export const getLatestNews = async (
 
     const jsonExampleString = JSON.stringify(jsonExample, null, 2);
 
-    // Dynamic instructions based on mode
-    const itemCount = fastMode ? 3 : 5;
-    const sourceConstraint = fastMode 
-      ? "検索先は大手ニュースサイト（日経新聞、Yahoo!ニュース等）1〜2つのみに限定し、速度を最優先してください。" 
-      : "日本国内の最新ニュースをGoogle検索してください。";
-
     const prompt = `
-      ${sourceConstraint}
-      以下のカテゴリに分類してください。
-
-      【重要：除外ルール】
-      中国に関連するニュースは検索結果および選定リストから完全に除外してください。
+      日本国内の最新ニュースをGoogle検索してください。
+      以下のカテゴリに分類し、各カテゴリ5件ずつ選定してください。
+      中国に関連するニュースは除外してください。
+      **出力するタイトルと要約は、必ず日本語で記述してください。**
 
       対象カテゴリ:
       ${categoriesPrompt}
-
-      各カテゴリについて、重要度が高いニュースを${itemCount}件ずつ選定してください。
-      ${fastMode ? "※概要は非常に短く、1文でまとめてください。" : ""}
       
-      【出力形式の絶対ルール】
-      検索結果をまとめた後、**最終的な出力は以下のJSON形式のみ**にしてください。
-      Markdownのコードブロック(\`\`\`json)や、挨拶文、説明文は一切含めないでください。
-      
-      期待するJSON構造:
+      出力は以下のJSON形式のみにしてください。Markdownコードブロックは不要です。
       ${jsonExampleString}
     `;
 
-    // Prompt carefully constructed to force JSON output after using the search tool.
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
@@ -135,78 +194,50 @@ export const getLatestNews = async (
 
     let text = response.text || "{}";
     
-    // Robust JSON Extraction: Find the substring between the first '{' and last '}'
+    // Robust JSON Extraction
     const firstOpen = text.indexOf('{');
     const lastClose = text.lastIndexOf('}');
-    
     if (firstOpen !== -1 && lastClose !== -1 && lastClose > firstOpen) {
         text = text.substring(firstOpen, lastClose + 1);
     } else {
-        // If no braces found, default to empty object
         text = "{}";
     }
 
     let json: any = {};
     try {
         json = JSON.parse(text);
-        // Handle case where model returns an array wrapped object
-        if (Array.isArray(json)) {
-            json = json[0] || {};
-        }
+        if (Array.isArray(json)) json = json[0] || {};
     } catch (e) {
-        console.warn("JSON Parse Failed, using empty data:", e);
-        json = {};
+        console.warn("JSON Parse Failed, using empty data");
     }
 
-    // Helper to find key case-insensitively
     const findKey = (obj: any, key: string) => {
         if (!obj) return [];
         const foundKey = Object.keys(obj).find(k => k.toLowerCase() === key.toLowerCase());
         return foundKey ? obj[foundKey] : [];
     };
 
-    // Initialize items with empty arrays for ALL categories (to satisfy type), 
-    // then fill in the ones we fetched.
-    const items: Record<NewsCategory, NewsItem[]> = Object.values(NewsCategory).reduce((acc, cat) => {
-      acc[cat] = [];
-      return acc;
-    }, {} as Record<NewsCategory, NewsItem[]>);
-
-    // Populate fetched data
     targetCategories.forEach(cat => {
       items[cat] = findKey(json, CATEGORY_MAP[cat].key) || [];
     });
 
-    // Extract grounding chunks for source links
     const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-    
     const sources: NewsSource[] = chunks
       .filter((c: any) => c.web?.uri && c.web?.title)
-      .map((c: any) => ({
-        title: c.web.title,
-        uri: c.web.uri
-      }));
-
-    const uniqueSources = Array.from(new Map(sources.map(s => [s.uri, s])).values());
+      .map((c: any) => ({ title: c.web.title, uri: c.web.uri }));
 
     return {
       items,
-      sources: uniqueSources,
-      timestamp: new Date()
+      sources: Array.from(new Map(sources.map(s => [s.uri, s])).values()),
+      timestamp
     };
 
   } catch (error) {
     console.error("News Fetch Error:", error);
-    // Return empty structure on error so the UI doesn't crash
-    const emptyItems = Object.values(NewsCategory).reduce((acc, cat) => {
-      acc[cat] = [];
-      return acc;
-    }, {} as Record<NewsCategory, NewsItem[]>);
-
     return {
-      items: emptyItems,
+      items,
       sources: [],
-      timestamp: new Date()
+      timestamp
     };
   }
 };

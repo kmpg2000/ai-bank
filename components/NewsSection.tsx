@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { RefreshCw, Newspaper, Clock, Info, Sparkles, Loader2 } from 'lucide-react';
 import { getLatestNews } from '../services/geminiService';
@@ -16,28 +15,40 @@ export const NewsSection: React.FC = () => {
     setError(false);
     
     try {
-      // 1. Priority Load: Economy only with FAST MODE
-      // This limits sources to 1-2 major sites and reduces items to 3 for ~2s response
-      const economyData = await getLatestNews([NewsCategory.ECONOMY], { fastMode: true });
-      setNews(economyData);
-      setLoading(false); // Unlock UI for the user immediately
-
-      // 2. Background Load: All other categories (Standard mode)
-      setBackgroundLoading(true);
+      // Start both requests in parallel to save time
+      // 1. Economy (Priority) - uses fast text parsing
+      const economyPromise = getLatestNews([NewsCategory.ECONOMY], { fastMode: true });
+      
+      // 2. Others (Background) - uses standard JSON parsing
       const otherCategories = Object.values(NewsCategory).filter(c => c !== NewsCategory.ECONOMY);
-      const otherData = await getLatestNews(otherCategories); // Default fastMode is false
+      const othersPromise = getLatestNews(otherCategories); 
+
+      // Await Priority Data (Economy)
+      const economyData = await economyPromise;
+      
+      setNews(economyData);
+      setLoading(false); // Unlock UI immediately after economy loads
+
+      // Await Background Data
+      // Update UI state to show background loader
+      setBackgroundLoading(true);
+      
+      const otherData = await othersPromise;
 
       // Merge data
       setNews(prev => {
+        // If the first request failed entirely, just use the second one
         if (!prev) return otherData;
         
-        // Create a new items object starting with previous data
+        // Create a new items object starting with previous data (Economy)
         const mergedItems = { ...prev.items };
         
-        // Only update the categories we just fetched in the background
-        // This prevents overwriting the existing Economy data with empty arrays
+        // Fill in the others
         otherCategories.forEach(cat => {
-            mergedItems[cat] = otherData.items[cat];
+            // Only update if we actually got items, otherwise keep empty array (or previous error state)
+            if (otherData.items[cat]?.length > 0) {
+              mergedItems[cat] = otherData.items[cat];
+            }
         });
 
         // Combine and deduplicate sources
@@ -47,13 +58,13 @@ export const NewsSection: React.FC = () => {
         return {
           items: mergedItems,
           sources: uniqueSources,
-          timestamp: new Date() // Update timestamp to latest fetch
+          timestamp: new Date()
         };
       });
 
     } catch (err) {
       console.error(err);
-      if (!news) setError(true); // Only show full error if we have no data at all
+      if (!news) setError(true);
     } finally {
       setLoading(false);
       setBackgroundLoading(false);
@@ -62,7 +73,6 @@ export const NewsSection: React.FC = () => {
 
   useEffect(() => {
     fetchNews();
-    // Removed automatic interval refresh logic
   }, []);
 
   const formatDate = (date: Date) => {
@@ -73,7 +83,7 @@ export const NewsSection: React.FC = () => {
   };
 
   // Check if the current active category is still loading (empty items but background loading is true)
-  const isCategoryLoading = !loading && backgroundLoading && news?.items[activeCategory]?.length === 0;
+  const isCategoryLoading = !loading && backgroundLoading && (!news?.items[activeCategory] || news.items[activeCategory].length === 0);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-visible mb-12 max-w-5xl mx-auto z-10 relative">
@@ -137,8 +147,8 @@ export const NewsSection: React.FC = () => {
               <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
                   <span className="animate-pulse">ニュースを取得中...</span>
               </div>
-              {/* fastMode returns 3 items, so show 3 skeletons to match expectation */}
-              {[...Array(3)].map((_, i) => (
+              {/* fastMode returns 5 items, so show 5 skeletons to match expectation */}
+              {[...Array(5)].map((_, i) => (
                 <div key={i} className="h-8 bg-gray-50 rounded-lg w-full animate-pulse"></div>
               ))}
             </div>
@@ -146,7 +156,7 @@ export const NewsSection: React.FC = () => {
             <ul className="divide-y divide-gray-100 divide-dashed relative min-h-[100px]">
               {news?.items[activeCategory]?.length === 0 && !error && !backgroundLoading && (
                 <li className="px-4 py-6 text-center text-gray-500 text-sm">
-                  このカテゴリのニュースはありません。
+                  情報取得失敗しました。しばらく経ってからお試ししてください。
                 </li>
               )}
 
@@ -187,6 +197,8 @@ export const NewsSection: React.FC = () => {
           )}
         </div>
         
+        {/* Grounding Sources removed as requested */}
+
         {/* AI Disclaimer Footer */}
         <div className="px-4 py-2 bg-gray-50 rounded-b-xl border-t border-gray-100 flex items-center gap-2 text-[10px] text-gray-400 justify-end">
           <Sparkles size={10} />

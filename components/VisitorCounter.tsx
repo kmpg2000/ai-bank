@@ -25,7 +25,8 @@ export const VisitorCounter: React.FC = () => {
         }
         
         const data = await response.json();
-        setCount(data.count);
+        // Add 10,000 offset as requested
+        setCount(data.count + 10000);
       } catch (error) {
         console.warn('Visitor counter error:', error);
         setError(true);

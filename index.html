@@ -5,23 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <!-- SEO Meta Tags -->
-    <meta name="description" content="AI-Bankは、最新の無料AIアプリを厳選して紹介するプラットフォームです。生活を豊かにするツール、勉強、ビジネス、エンタメなど多様なジャンルのAIを検索・比較できます。" />
-    <meta name="keywords" content="AIアプリ, 人工知能, 便利ツール, 無料アプリ, 生成AI, AI検索, AI-Bank, 生活効率化" />
+    <meta name="description" content="AI-Bank（AIバンク）は、最新の無料AIアプリ・ツールを厳選して紹介する国内最大級のライブラリです。ChatGPTやGeminiをはじめ、ビジネス、学習、画像生成など目的に合ったAIを検索・比較できます。あなたに最適なAIが必ず見つかります。" />
+    <meta name="keywords" content="AI-Bank, AIバンク, AIアプリ, 無料AI, AIツール, 生成AI, ChatGPT, Gemini, 人工知能, AI検索, AI比較, エーアイバンク" />
     <meta name="robots" content="index, follow" />
     
     <!-- Open Graph Tags -->
-    <meta property="og:title" content="AI-Bank - 無料のAI アプリで生活を豊かにしませんか。" />
-    <meta property="og:description" content="AI-Bankは、最新の無料AIアプリを厳選して紹介するプラットフォームです。AIコンシェルジュがあなたに最適なアプリを提案します。" />
+    <meta property="og:title" content="AI-Bank (AIバンク) - 最新の無料AIアプリ検索・比較プラットフォーム" />
+    <meta property="og:description" content="AI-Bank（AIバンク）は、最新の無料AIアプリを厳選して紹介するプラットフォームです。AIコンシェルジュがあなたに最適なアプリを提案します。" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="AI-Bank" />
     <meta property="og:image" content="https://picsum.photos/1200/630?random=ai-bank" />
     
     <!-- Twitter Card Tags -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="AI-Bank - 無料のAI アプリで生活を豊かにしませんか。" />
+    <meta name="twitter:title" content="AI-Bank (AIバンク) - 最新の無料AIアプリ検索・比較プラットフォーム" />
     <meta name="twitter:description" content="最新のAIアプリをジャンル別に紹介。AIコンシェルジュ機能搭載。" />
 
-    <title>AI-Bank - 無料のAI アプリで生活を豊かにしませんか。</title>
+    <!-- Structured Data (JSON-LD) for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "AI-Bank",
+      "alternateName": ["AIバンク", "エーアイバンク", "AI Bank"],
+      "url": "https://ai-bank.vercel.app/",
+      "description": "最新の無料AIアプリを厳選して紹介するプラットフォーム",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://ai-bank.vercel.app/?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <title>AI-Bank (AIバンク) - 最新の無料AIアプリ検索・比較プラットフォーム</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap');
@@ -66,7 +83,8 @@
     "@google/genai": "https://esm.sh/@google/genai@^1.32.0",
     "path": "https://esm.sh/path@^0.12.7",
     "vite": "https://esm.sh/vite@^7.2.7",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "fs": "https://esm.sh/fs@^0.0.1-security"
   }
 }
 </script>
