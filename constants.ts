@@ -24,4 +24,15 @@ export const MOCK_APPS: AIApp[] = [
     rating: 4.7,
     url: 'https://science-six-opal.vercel.app/'
   },
+  // 医療カテゴリのアプリを追加
+  {
+    id: 'medical-ai-1',
+    name: 'AI総合病院',
+    description: 'オンラインで医療相談や一次診断をサポートするAI。症状のトリアージや受診の目安を提案します。',
+    category: AppCategory.MEDICAL,
+    imageUrl: 'https://picsum.photos/400/300?random=202',
+    tags: ['医療', '診察', '健康相談'],
+    rating: 4.6,
+    url: 'https://ai-doctor-three-psi.vercel.app/'
+  },
 ];
